@@ -44,37 +44,36 @@ static sigjmp_buf jmpbuf;
 
 static int conversation(int num_msg, PAM_CONST struct pam_message **msg,
                         struct pam_response **resp, void *appdata_ptr) {
-    if (num_msg == 1 &&
-            (msg[0]->msg_style == PAM_PROMPT_ECHO_OFF ||
-             msg[0]->msg_style == PAM_PROMPT_ECHO_ON)) {
-        *resp = malloc(sizeof(struct pam_response));
-        assert(*resp);
-        (*resp)->resp = calloc(1024, 1);
-        struct termios termios = old_termios;
-        if (msg[0]->msg_style == PAM_PROMPT_ECHO_OFF) {
-            termios.c_lflag &= ~(ECHO|ECHONL);
-        }
-        sigsetjmp(jmpbuf, 1);
-        jmpbuf_valid = 1;
-        sigset_t mask;
-        sigemptyset(&mask);
-        sigaddset(&mask, SIGTSTP);
-        assert(!sigprocmask(SIG_UNBLOCK, &mask, NULL));
-        printf("%s ", msg[0]->msg);
-        assert(!tcsetattr(0, TCSAFLUSH, &termios));
-        assert(fgets((*resp)->resp, 1024, stdin));
-        assert(!tcsetattr(0, TCSAFLUSH, &old_termios));
-        puts("");
-        assert(!sigprocmask(SIG_BLOCK, &mask, NULL));
-        jmpbuf_valid = 0;
-        char *ptr = strrchr((*resp)->resp, '\n');
-        if (ptr) {
-            *ptr = '\000';
-        }
-        (*resp)->resp_retcode = 0;
-        return PAM_SUCCESS;
+  if (num_msg == 1 && (msg[0]->msg_style == PAM_PROMPT_ECHO_OFF ||
+                       msg[0]->msg_style == PAM_PROMPT_ECHO_ON)) {
+    *resp = malloc(sizeof(struct pam_response));
+    assert(*resp);
+    (*resp)->resp = calloc(1024, 1);
+    struct termios termios = old_termios;
+    if (msg[0]->msg_style == PAM_PROMPT_ECHO_OFF) {
+      termios.c_lflag &= ~(ECHO | ECHONL);
     }
-    return PAM_CONV_ERR;
+    sigsetjmp(jmpbuf, 1);
+    jmpbuf_valid = 1;
+    sigset_t mask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGTSTP);
+    assert(!sigprocmask(SIG_UNBLOCK, &mask, NULL));
+    printf("%s ", msg[0]->msg);
+    assert(!tcsetattr(0, TCSAFLUSH, &termios));
+    assert(fgets((*resp)->resp, 1024, stdin));
+    assert(!tcsetattr(0, TCSAFLUSH, &old_termios));
+    puts("");
+    assert(!sigprocmask(SIG_BLOCK, &mask, NULL));
+    jmpbuf_valid = 0;
+    char *ptr = strrchr((*resp)->resp, '\n');
+    if (ptr) {
+      *ptr = '\000';
+    }
+    (*resp)->resp_retcode = 0;
+    return PAM_SUCCESS;
+  }
+  return PAM_CONV_ERR;
 }
 
 #ifdef sun
@@ -85,97 +84,92 @@ static int conversation(int num_msg, PAM_CONST struct pam_message **msg,
 
 int pam_get_item(const pam_handle_t *pamh, int item_type,
                  PAM_CONST void **item) {
-    switch (item_type) {
-    case PAM_SERVICE: {
-        static const char service[] = "google_authenticator_demo";
-        *item = service;
-        return PAM_SUCCESS;
-    }
-    case PAM_USER: {
-        *item = getenv("USER");
-        return PAM_SUCCESS;
-    }
-    case PAM_CONV: {
-        static struct pam_conv conv = { .conv = conversation }, *p_conv = &conv;
-        *item = p_conv;
-        return PAM_SUCCESS;
-    }
-    default:
-        return PAM_BAD_ITEM;
-    }
+  switch (item_type) {
+  case PAM_SERVICE: {
+    static const char service[] = "google_authenticator_demo";
+    *item = service;
+    return PAM_SUCCESS;
+  }
+  case PAM_USER: {
+    *item = getenv("USER");
+    return PAM_SUCCESS;
+  }
+  case PAM_CONV: {
+    static struct pam_conv conv = {.conv = conversation}, *p_conv = &conv;
+    *item = p_conv;
+    return PAM_SUCCESS;
+  }
+  default:
+    return PAM_BAD_ITEM;
+  }
 }
 
-int pam_set_item(pam_handle_t *pamh, int item_type,
-                 const void *item) {
-    switch (item_type) {
-    case PAM_AUTHTOK:
-        return PAM_SUCCESS;
-    default:
-        return PAM_BAD_ITEM;
-    }
+int pam_set_item(pam_handle_t *pamh, int item_type, const void *item) {
+  switch (item_type) {
+  case PAM_AUTHTOK:
+    return PAM_SUCCESS;
+  default:
+    return PAM_BAD_ITEM;
+  }
 }
 
 static void print_diagnostics(int signo) {
-    extern const char *get_error_msg(void);
-    assert(!tcsetattr(0, TCSAFLUSH, &old_termios));
-    fprintf(stderr, "%s\n", get_error_msg());
-    _exit(1);
+  extern const char *get_error_msg(void);
+  assert(!tcsetattr(0, TCSAFLUSH, &old_termios));
+  fprintf(stderr, "%s\n", get_error_msg());
+  _exit(1);
 }
 
 static void reset_console(int signo) {
-    assert(!tcsetattr(0, TCSAFLUSH, &old_termios));
-    puts("");
-    _exit(1);
+  assert(!tcsetattr(0, TCSAFLUSH, &old_termios));
+  puts("");
+  _exit(1);
 }
 
 static void stop(int signo) {
-    assert(!tcsetattr(0, TCSAFLUSH, &old_termios));
-    puts("");
-    raise(SIGSTOP);
+  assert(!tcsetattr(0, TCSAFLUSH, &old_termios));
+  puts("");
+  raise(SIGSTOP);
 }
 
 static void cont(int signo) {
-    if (jmpbuf_valid) {
-        siglongjmp(jmpbuf, 0);
-    }
+  if (jmpbuf_valid) {
+    siglongjmp(jmpbuf, 0);
+  }
 }
 
 int main(int argc, char *argv[]) {
-    extern int pam_sm_authenticate(pam_handle_t *, int, int, const char **);
+  extern int pam_sm_authenticate(pam_handle_t *, int, int, const char **);
 
-    // Try to redirect stdio to /dev/tty
-    int fd = open("/dev/tty", O_RDWR);
-    if (fd >= 0) {
-        dup2(fd, 0);
-        dup2(fd, 1);
-        dup2(fd, 2);
-        close(fd);
-    }
+  // Try to redirect stdio to /dev/tty
+  int fd = open("/dev/tty", O_RDWR);
+  if (fd >= 0) {
+    dup2(fd, 0);
+    dup2(fd, 1);
+    dup2(fd, 2);
+    close(fd);
+  }
 
-    // Disable core files
-    assert(!setrlimit(RLIMIT_CORE, (struct rlimit []) {
-        {
-            0, 0
-        }
-    }));
+  // Disable core files
+  assert(!setrlimit(RLIMIT_CORE, (struct rlimit[]){{0, 0}}));
 
-    // Set up error and job control handlers
-    assert(!tcgetattr(0, &old_termios));
-    sigset_t mask;
-    sigemptyset(&mask);
-    sigaddset(&mask, SIGTSTP);
-    assert(!sigprocmask(SIG_BLOCK, &mask, NULL));
-    assert(!signal(SIGABRT, print_diagnostics));
-    assert(!signal(SIGINT, reset_console));
-    assert(!signal(SIGTSTP, stop));
-    assert(!signal(SIGCONT, cont));
+  // Set up error and job control handlers
+  assert(!tcgetattr(0, &old_termios));
+  sigset_t mask;
+  sigemptyset(&mask);
+  sigaddset(&mask, SIGTSTP);
+  assert(!sigprocmask(SIG_BLOCK, &mask, NULL));
+  assert(!signal(SIGABRT, print_diagnostics));
+  assert(!signal(SIGINT, reset_console));
+  assert(!signal(SIGTSTP, stop));
+  assert(!signal(SIGCONT, cont));
 
-    // Attempt login
-    if (pam_sm_authenticate(NULL, 0, argc-1, (const char **)argv+1)
-            != PAM_SUCCESS) {
-        fprintf(stderr, "Login failed\n");
-        abort();
-    }
+  // Attempt login
+  if (pam_sm_authenticate(NULL, 0, argc - 1, (const char **)argv + 1) !=
+      PAM_SUCCESS) {
+    fprintf(stderr, "Login failed\n");
+    abort();
+  }
 
-    return 0;
+  return 0;
 }

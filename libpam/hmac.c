@@ -20,60 +20,59 @@
 #include "hmac.h"
 #include "sha1.h"
 
-void hmac_sha1(const uint8_t *key, int keyLength,
-               const uint8_t *data, int dataLength,
-               uint8_t *result, int resultLength) {
-    SHA1_INFO ctx;
-    uint8_t hashed_key[SHA1_DIGEST_LENGTH];
-    if (keyLength > 64) {
-        // The key can be no bigger than 64 bytes. If it is, we'll hash it down to
-        // 20 bytes.
-        sha1_init(&ctx);
-        sha1_update(&ctx, key, keyLength);
-        sha1_final(&ctx, hashed_key);
-        key = hashed_key;
-        keyLength = SHA1_DIGEST_LENGTH;
-    }
-
-    // The key for the inner digest is derived from our key, by padding the key
-    // the full length of 64 bytes, and then XOR'ing each byte with 0x36.
-    uint8_t tmp_key[64];
-    for (int i = 0; i < keyLength; ++i) {
-        tmp_key[i] = key[i] ^ 0x36;
-    }
-    if (keyLength < 64) {
-        memset(tmp_key + keyLength, 0x36, 64 - keyLength);
-    }
-
-    // Compute inner digest
+void hmac_sha1(const uint8_t *key, int keyLength, const uint8_t *data,
+               int dataLength, uint8_t *result, int resultLength) {
+  SHA1_INFO ctx;
+  uint8_t hashed_key[SHA1_DIGEST_LENGTH];
+  if (keyLength > 64) {
+    // The key can be no bigger than 64 bytes. If it is, we'll hash it down to
+    // 20 bytes.
     sha1_init(&ctx);
-    sha1_update(&ctx, tmp_key, 64);
-    sha1_update(&ctx, data, dataLength);
-    uint8_t sha[SHA1_DIGEST_LENGTH];
-    sha1_final(&ctx, sha);
+    sha1_update(&ctx, key, keyLength);
+    sha1_final(&ctx, hashed_key);
+    key = hashed_key;
+    keyLength = SHA1_DIGEST_LENGTH;
+  }
 
-    // The key for the outer digest is derived from our key, by padding the key
-    // the full length of 64 bytes, and then XOR'ing each byte with 0x5C.
-    for (int i = 0; i < keyLength; ++i) {
-        tmp_key[i] = key[i] ^ 0x5C;
-    }
-    memset(tmp_key + keyLength, 0x5C, 64 - keyLength);
+  // The key for the inner digest is derived from our key, by padding the key
+  // the full length of 64 bytes, and then XOR'ing each byte with 0x36.
+  uint8_t tmp_key[64];
+  for (int i = 0; i < keyLength; ++i) {
+    tmp_key[i] = key[i] ^ 0x36;
+  }
+  if (keyLength < 64) {
+    memset(tmp_key + keyLength, 0x36, 64 - keyLength);
+  }
 
-    // Compute outer digest
-    sha1_init(&ctx);
-    sha1_update(&ctx, tmp_key, 64);
-    sha1_update(&ctx, sha, SHA1_DIGEST_LENGTH);
-    sha1_final(&ctx, sha);
+  // Compute inner digest
+  sha1_init(&ctx);
+  sha1_update(&ctx, tmp_key, 64);
+  sha1_update(&ctx, data, dataLength);
+  uint8_t sha[SHA1_DIGEST_LENGTH];
+  sha1_final(&ctx, sha);
 
-    // Copy result to output buffer and truncate or pad as necessary
-    memset(result, 0, resultLength);
-    if (resultLength > SHA1_DIGEST_LENGTH) {
-        resultLength = SHA1_DIGEST_LENGTH;
-    }
-    memcpy(result, sha, resultLength);
+  // The key for the outer digest is derived from our key, by padding the key
+  // the full length of 64 bytes, and then XOR'ing each byte with 0x5C.
+  for (int i = 0; i < keyLength; ++i) {
+    tmp_key[i] = key[i] ^ 0x5C;
+  }
+  memset(tmp_key + keyLength, 0x5C, 64 - keyLength);
 
-    // Zero out all internal data structures
-    memset(hashed_key, 0, sizeof(hashed_key));
-    memset(sha, 0, sizeof(sha));
-    memset(tmp_key, 0, sizeof(tmp_key));
+  // Compute outer digest
+  sha1_init(&ctx);
+  sha1_update(&ctx, tmp_key, 64);
+  sha1_update(&ctx, sha, SHA1_DIGEST_LENGTH);
+  sha1_final(&ctx, sha);
+
+  // Copy result to output buffer and truncate or pad as necessary
+  memset(result, 0, resultLength);
+  if (resultLength > SHA1_DIGEST_LENGTH) {
+    resultLength = SHA1_DIGEST_LENGTH;
+  }
+  memcpy(result, sha, resultLength);
+
+  // Zero out all internal data structures
+  memset(hashed_key, 0, sizeof(hashed_key));
+  memset(sha, 0, sizeof(sha));
+  memset(tmp_key, 0, sizeof(tmp_key));
 }
