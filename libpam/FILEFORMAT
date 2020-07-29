@@ -78,5 +78,3 @@ Currently, the following options are recognized:
 Any all-numeric sequence of eight-digit numbers are randomly generated
 one-time scratch code tokens. The user can enter any arbitrary one-time code
 to log into his account. The code will then be removed from the file.
-
-
