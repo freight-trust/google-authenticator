@@ -3,6 +3,7 @@
 Example PAM module demonstrating two-factor authentication.
 
 ## Build & install
+
 ```shell
 ./bootstrap.sh
 ./configure
@@ -10,13 +11,13 @@ make
 sudo make install
 ```
 
-If you don't have access to "sudo", you have to manually become "root" prior
-to calling "make install".
+If you don't have access to "sudo", you have to manually become "root" prior to
+calling "make install".
 
 ## Setting up the PAM module for your system
 
 For highest security, make sure that both password and OTP are being requested
-even if password and/or OTP are incorrect. This means that *at least* the first
+even if password and/or OTP are incorrect. This means that _at least_ the first
 of `pam_unix.so` (or whatever other module is used to verify passwords) and
 `pam_google_authenticator.so` should be set as `required`, not `requisite`. It
 probably can't hurt to have both be `required`, but it could depend on the rest
@@ -28,7 +29,7 @@ attempts.
 
 Add this line to your PAM configuration file:
 
-`  auth required pam_google_authenticator.so no_increment_hotp`
+`auth required pam_google_authenticator.so no_increment_hotp`
 
 ## Setting up a user
 
@@ -52,31 +53,31 @@ given to `google-authenticator`, after having entered your normal user id and
 your normal UNIX account password.
 
 During the initial roll-out process, you might find that not all users have
-created a secret key yet. If you would still like them to be able to log
-in, you can pass the "nullok" option on the module's command line:
+created a secret key yet. If you would still like them to be able to log in, you
+can pass the "nullok" option on the module's command line:
 
-`  auth required pam_google_authenticator.so nullok`
+`auth required pam_google_authenticator.so nullok`
 
 ## Encrypted home directories
 
 If your system encrypts home directories until after your users entered their
 password, you either have to re-arrange the entries in the PAM configuration
-file to decrypt the home directory prior to asking for the OTP code, or
-you have to store the secret file in a non-standard location:
+file to decrypt the home directory prior to asking for the OTP code, or you have
+to store the secret file in a non-standard location:
 
-`  auth required pam_google_authenticator.so secret=/var/unencrypted-home/${USER}/.google_authenticator`
+`auth required pam_google_authenticator.so secret=/var/unencrypted-home/${USER}/.google_authenticator`
 
 would be a possible choice. Make sure to set appropriate permissions. You also
 have to tell your users to manually move their .google_authenticator file to
 this location.
 
-In addition to "${USER}", the `secret=` option also recognizes both "~" and
+In addition to "\${USER}", the `secret=` option also recognizes both "~" and
 `${HOME}` as short-hands for the user's home directory.
 
-When using the `secret=` option, you might want to also set the `user=`
-option. The latter forces the PAM module to switch to a dedicated hard-coded
-user id prior to doing any file operations. When using the `user=` option, you
-must not include "~" or "${HOME}" in the filename.
+When using the `secret=` option, you might want to also set the `user=` option.
+The latter forces the PAM module to switch to a dedicated hard-coded user id
+prior to doing any file operations. When using the `user=` option, you must not
+include "~" or "\${HOME}" in the filename.
 
 The `user=` option can also be useful if you want to authenticate users who do
 not have traditional UNIX accounts on your system.
@@ -93,35 +94,35 @@ Enable more verbose log messages in syslog.
 
 ### try_first_pass / use_first_pass / forward_pass
 
-Some PAM clients cannot prompt the user for more than just the password. To
-work around this problem, this PAM module supports stacking. If you pass the
+Some PAM clients cannot prompt the user for more than just the password. To work
+around this problem, this PAM module supports stacking. If you pass the
 `forward_pass` option, the `pam_google_authenticator` module queries the user
-for both the system password and the verification code in a single prompt.
-It then forwards the system password to the next PAM module, which will have
-to be configured with the `use_first_pass` option.
+for both the system password and the verification code in a single prompt. It
+then forwards the system password to the next PAM module, which will have to be
+configured with the `use_first_pass` option.
 
 In turn, `pam_google_authenticator` module also supports both the standard
-`use_first_pass` and `try_first_pass` options. But most users would not need
-to set those on the `pam_google_authenticator`.
+`use_first_pass` and `try_first_pass` options. But most users would not need to
+set those on the `pam_google_authenticator`.
 
 ### noskewadj
 
 If you discover that your TOTP code never works, this is most commonly the
 result of the clock on your server being different from the one on your Android
 device. The PAM module makes an attempt to compensate for time skew. You can
-teach it about the amount of skew that you are experiencing, by trying to log
-it three times in a row. Make sure you always wait 30s (but not longer), so
-that you get three distinct TOTP codes.
+teach it about the amount of skew that you are experiencing, by trying to log it
+three times in a row. Make sure you always wait 30s (but not longer), so that
+you get three distinct TOTP codes.
 
-Some administrators prefer that time skew isn't adjusted automatically, as
-doing so results in a slightly less secure system configuration. If you want
-to disable it, you can do so on the module command line:
+Some administrators prefer that time skew isn't adjusted automatically, as doing
+so results in a slightly less secure system configuration. If you want to
+disable it, you can do so on the module command line:
 
-`  auth required pam_google_authenticator.so noskewadj`
+`auth required pam_google_authenticator.so noskewadj`
 
 ### no_increment_hotp
 
-Don't increment the counter for failed HOTP attempts.  Normally you should set
+Don't increment the counter for failed HOTP attempts. Normally you should set
 this so failed password attempts by an attacker without a token don't lock out
 the authorized user.
 
@@ -133,35 +134,34 @@ Allow users to log in without OTP, if they haven't set up OTP yet.
 
 By default, the PAM module does not echo the verification code when it is
 entered by the user. In some situations, the administrator might prefer a
-different behavior. Pass the `echo_verification_code` option to the module
-in order to enable echoing.
+different behavior. Pass the `echo_verification_code` option to the module in
+order to enable echoing.
 
 If you would like verification codes that are counter based instead of
 timebased, use the `google-authenticator` binary to generate a secret key in
-your home directory with the proper option.  In this mode, clock skew is
+your home directory with the proper option. In this mode, clock skew is
 irrelevant and the window size option now applies to how many codes beyond the
 current one that would be accepted, to reduce synchronization problems.
 
 ### otp_length
 
 Many tokens can be configured to use longer HOTP/TOTP codes, up to 9 digits.
-Valid values are in the range 6-9.  The default if not specified is 6.
-Setting this option will change the code length for all users.
-It is not currently possible to set this on a user-by-user basis.
+Valid values are in the range 6-9. The default if not specified is 6. Setting
+this option will change the code length for all users. It is not currently
+possible to set this on a user-by-user basis.
 
 ### show_counter_in_prompt
 
 Show the current HOTP counter value, if any is available, in the prompt
-displayed to the user.  Note that this will slightly decrease the security
-of the token, since an attacker will only need to guess the shared secret
-and not also the counter value.  Assuming shared secrets of at least 20 bytes,
-the impact of knowing the few bits of state from the counter are likely to be
-minimal.  Of more concern may be that an attacker will be able to detect when
-the real user logs in.
+displayed to the user. Note that this will slightly decrease the security of the
+token, since an attacker will only need to guess the shared secret and not also
+the counter value. Assuming shared secrets of at least 20 bytes, the impact of
+knowing the few bits of state from the counter are likely to be minimal. Of more
+concern may be that an attacker will be able to detect when the real user logs
+in.
 
 ### default_window_size / default_rwindow_size
 
-Default values for the WINDOW_SIZE and RWINDOW_SIZE options.  This may be
+Default values for the WINDOW_SIZE and RWINDOW_SIZE options. This may be
 overridden by corresponding values in individual user's .google_authenticator
 files.
-
